@@ -25,9 +25,19 @@ export const Navbar: React.FC = () => {
   const [showNotifPanel, setShowNotifPanel] = useState(false);
   const notifRef = useRef<HTMLDivElement>(null);
 
-  const totalCartCount = items.reduce((sum, item) => sum + item.quantity, 0);
-  const wishlistCount = productIds.length;
-  const unreadCount = notifications.filter((n) => !n.read).length;
+  // Hydration protection
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const currentUser = mounted ? user : null;
+  const isAdmin = currentUser?.role === "admin";
+  const isCustomer = currentUser?.role === "customer";
+
+  const totalCartCount = mounted ? items.reduce((sum, item) => sum + item.quantity, 0) : 0;
+  const wishlistCount = mounted ? productIds.length : 0;
+  const unreadCount = mounted ? notifications.filter((n) => !n.read).length : 0;
 
   useEffect(() => {
     const handleScroll = () => {
@@ -69,8 +79,8 @@ export const Navbar: React.FC = () => {
     { label: "Shop", href: "/products" },
   ];
 
-  if (user) {
-    if (user.role === "admin") {
+  if (currentUser) {
+    if (isAdmin) {
       navLinks.push({ label: "Admin Command", href: "/admin" });
     } else {
       navLinks.push(
@@ -146,7 +156,7 @@ export const Navbar: React.FC = () => {
             </button>
 
             {/* Admin Notifications Bell */}
-            {user?.role === "admin" && (
+            {isAdmin && (
               <div className="relative" ref={notifRef}>
                 <button
                   onClick={() => setShowNotifPanel(!showNotifPanel)}
@@ -220,7 +230,7 @@ export const Navbar: React.FC = () => {
             )}
 
             {/* Profile Icon / Dashboard Redirect */}
-            {user?.role === "customer" && (
+            {isCustomer && (
               <Link
                 href="/dashboard"
                 className="text-petal-text-secondary hover:text-petal-rose transition-colors duration-200 p-1.5"
@@ -231,7 +241,7 @@ export const Navbar: React.FC = () => {
             )}
 
             {/* Wishlist Link (Customers only) */}
-            {user?.role === "customer" && (
+            {isCustomer && (
               <Link
                 href="/dashboard?tab=wishlist"
                 className="text-petal-text-secondary hover:text-petal-rose transition-colors duration-200 p-1.5 relative"
@@ -247,7 +257,7 @@ export const Navbar: React.FC = () => {
             )}
 
             {/* Shopping Bag / Cart (Customers only, hidden for Admins) */}
-            {(!user || user.role === "customer") && (
+            {(!currentUser || isCustomer) && (
               <button
                 onClick={() => setCartOpen(true)}
                 className="text-petal-text-secondary hover:text-petal-rose transition-colors duration-200 p-1.5 relative cursor-pointer"
@@ -263,10 +273,10 @@ export const Navbar: React.FC = () => {
             )}
 
             {/* Profile Account Portal (Log in / Sign Out actions) */}
-            {user ? (
+            {currentUser ? (
               <div className="flex items-center gap-3">
                 <span className="hidden sm:inline text-[11px] font-bold text-petal-text-secondary">
-                  Hi, {user.name.split(" ")[0]}
+                  Hi, {currentUser.name.split(" ")[0]}
                 </span>
                 <button
                   onClick={() => {
