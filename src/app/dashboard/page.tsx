@@ -11,6 +11,8 @@ import { useUIStore } from "@/store/uiStore";
 import { getOrders, getFeaturedProducts, MockOrder, MockProduct } from "@/lib/db";
 import { User, ShoppingBag, Heart, MapPin, Wallet, ArrowRight, Plus, Trash2, ShieldCheck } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useAuthStore } from "@/store/authStore";
+import { useOrderStore } from "@/store/orderStore";
 
 function UserDashboardContent() {
   const router = useRouter();
@@ -18,13 +20,25 @@ function UserDashboardContent() {
   const { addToast } = useUIStore();
   const { productIds, toggleWishlist } = useWishlistStore();
   const { addItem } = useCartStore();
+  const { user } = useAuthStore();
+
+  // Protect Route: Customer role required
+  useEffect(() => {
+    if (!user) {
+      addToast("Please log in to view your dashboard.", "error");
+      router.push("/login");
+    } else if (user.role === "admin") {
+      addToast("Administrators cannot access the customer dashboard.", "error");
+      router.push("/admin");
+    }
+  }, [user, router]);
 
   const activeTab = searchParams.get("tab") || "profile";
 
-  // State
-  const [orders, setOrders] = useState<MockOrder[]>([]);
+  // State (using reactive order store)
+  const { orders, setOrders } = useOrderStore();
   const [wishlistItems, setWishlistItems] = useState<MockProduct[]>([]);
-  const [walletBalance, setWalletBalance] = useState(150.0);
+  const [walletBalance, setWalletBalance] = useState(15000.0);
   const [addFundsAmount, setAddFundsAmount] = useState("");
   const [userProfile, setUserProfile] = useState({
     name: "Ankit K.",
@@ -34,11 +48,22 @@ function UserDashboardContent() {
     joined: "May 2026",
   });
 
+  // Sync profile state with logged-in user
+  useEffect(() => {
+    if (user) {
+      setUserProfile((prev) => ({
+        ...prev,
+        name: user.name,
+        email: user.email,
+      }));
+    }
+  }, [user]);
+
   // Fetch orders & wishlist items
   useEffect(() => {
     async function loadDashboardData() {
-      // Load orders
-      const ords = await getOrders("mock-user-1");
+      // Load orders from database fallback
+      const ords = await getOrders(user?.uid || "mock-user-1");
       setOrders(ords);
 
       // Load wishlist items
@@ -58,7 +83,7 @@ function UserDashboardContent() {
     const amt = parseFloat(addFundsAmount);
     if (!isNaN(amt) && amt > 0) {
       setWalletBalance((prev) => prev + amt);
-      addFundsAmount && addToast(`Added $${amt.toFixed(2)} to your wallet.`, "success");
+      addFundsAmount && addToast(`Added Rs ${amt.toFixed(2)} to your wallet.`, "success");
       setAddFundsAmount("");
     }
   };
@@ -106,7 +131,7 @@ function UserDashboardContent() {
                 Wallet Balance
               </div>
               <div className="text-lg font-bold text-petal-text-primary mt-0.5">
-                ${walletBalance.toFixed(2)}
+                Rs {walletBalance.toFixed(2)}
               </div>
             </div>
           </div>
@@ -222,52 +247,56 @@ function UserDashboardContent() {
                     </p>
                   </div>
 
-                  {orders.length > 0 ? (
-                    <div className="space-y-5">
-                      {orders.map((ord) => {
-                        // Badge color maps
-                        let badgeType: "rose" | "lavender" | "sky" | "sage" | "neutral" = "lavender";
-                        if (ord.status === "DELIVERED") badgeType = "sage";
-                        if (ord.status === "SHIPPED") badgeType = "sky";
-                        if (ord.status === "CANCELLED") badgeType = "rose";
+                  {/* Filter orders dynamically to display only this customer's orders */}
+                  {(() => {
+                    const myOrders = orders.filter((o) => o.userId === (user?.uid || "mock-user-1"));
+                    return myOrders.length > 0 ? (
+                      <div className="space-y-5">
+                        {myOrders.map((ord) => {
+                          // Badge color maps
+                          let badgeType: "rose" | "lavender" | "sky" | "sage" | "neutral" = "lavender";
+                          if (ord.status === "DELIVERED") badgeType = "sage";
+                          if (ord.status === "SHIPPED") badgeType = "sky";
+                          if (ord.status === "CANCELLED") badgeType = "rose";
 
-                        return (
-                          <div
-                            key={ord.id}
-                            className="bg-white border border-petal-border rounded-card p-5.5 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-6"
-                          >
-                            <div className="space-y-2">
-                              <div className="flex items-center gap-3">
-                                <span className="font-playfair text-sm italic font-bold text-petal-text-primary">
-                                  Order #{ord.id}
+                          return (
+                            <div
+                              key={ord.id}
+                              className="bg-white border border-petal-border rounded-card p-5.5 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-6"
+                            >
+                              <div className="space-y-2">
+                                <div className="flex items-center gap-3">
+                                  <span className="font-playfair text-sm italic font-bold text-petal-text-primary">
+                                    Order #{ord.id}
+                                  </span>
+                                  <PetalBadge variant={badgeType} label={ord.status} />
+                                </div>
+                                <p className="text-xs text-petal-text-secondary font-medium leading-relaxed max-w-[400px]">
+                                  <strong>Destination:</strong> {ord.address} <br />
+                                  <strong>Date:</strong> {new Date(ord.createdAt).toLocaleDateString()}
+                                </p>
+                              </div>
+
+                              <div className="text-left md:text-right space-y-2.5 w-full md:w-auto border-t md:border-t-0 pt-4 md:pt-0 border-stone-50">
+                                <div className="text-sm font-bold text-petal-text-primary">
+                                  Total paid: Rs {ord.total.toFixed(2)}
+                                </div>
+                                <span className="text-[10px] uppercase font-bold text-petal-text-tertiary tracking-wider block">
+                                  Paid via {ord.paymentMethod}
                                 </span>
-                                <PetalBadge variant={badgeType} label={ord.status} />
                               </div>
-                              <p className="text-xs text-petal-text-secondary font-medium leading-relaxed max-w-[400px]">
-                                <strong>Destination:</strong> {ord.address} <br />
-                                <strong>Date:</strong> {new Date(ord.createdAt).toLocaleDateString()}
-                              </p>
                             </div>
-
-                            <div className="text-left md:text-right space-y-2.5 w-full md:w-auto border-t md:border-t-0 pt-4 md:pt-0 border-stone-50">
-                              <div className="text-sm font-bold text-petal-text-primary">
-                                Total paid: ${ord.total.toFixed(2)}
-                              </div>
-                              <span className="text-[10px] uppercase font-bold text-petal-text-tertiary tracking-wider block">
-                                Paid via {ord.paymentMethod}
-                              </span>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <div className="bg-white border border-petal-border rounded-card p-12 shadow-sm text-center">
-                      <p className="text-sm font-semibold text-petal-text-secondary italic">
-                        You have not placed any orders yet.
-                      </p>
-                    </div>
-                  )}
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="bg-white border border-petal-border rounded-card p-12 shadow-sm text-center">
+                        <p className="text-sm font-semibold text-petal-text-secondary italic">
+                          You have not placed any orders yet.
+                        </p>
+                      </div>
+                    );
+                  })()}
                 </motion.div>
               )}
 
@@ -316,7 +345,7 @@ function UserDashboardContent() {
 
                           <div className="flex items-center justify-between gap-3 mt-4">
                             <span className="text-xs font-bold text-petal-text-primary">
-                              ${item.price.toFixed(2)}
+                              Rs {item.price.toFixed(2)}
                             </span>
                             <button
                               onClick={() => handleAddToCart(item)}
@@ -360,14 +389,14 @@ function UserDashboardContent() {
                   <form onSubmit={handleAddFunds} className="space-y-4 max-w-[360px]">
                     <div>
                       <label className="block text-[10px] font-bold uppercase tracking-widest text-petal-text-primary mb-1.5">
-                        Add Funds (USD)
+                        Add Funds (Rs)
                       </label>
                       <div className="flex gap-3">
                         <input
                           type="number"
                           required
-                          min="1"
-                          max="1000"
+                          min="100"
+                          max="50000"
                           placeholder="e.g. 50"
                           value={addFundsAmount}
                           onChange={(e) => setAddFundsAmount(e.target.value)}

@@ -119,8 +119,8 @@ export const useCartStore = create<CartState>()(
 
       getDeliveryCost: () => {
         const subtotal = get().getSubtotal();
-        if (subtotal === 0 || subtotal >= 100) return 0; // Free delivery above $100
-        return 12.0; // Standard $12 delivery
+        if (subtotal === 0 || subtotal >= 5000) return 0; // Free delivery above Rs 5000
+        return 150.0; // Standard Rs 150 delivery
       },
 
       getTotal: () => {

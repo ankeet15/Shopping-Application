@@ -11,6 +11,7 @@ import {
 } from "./mockData";
 
 export type { MockProduct, MockCategory, MockReview, MockCoupon, MockOrder };
+import { useOrderStore } from "@/store/orderStore";
 
 // Safe mock stub for Prisma Client when environment has no running DB adapters
 class PrismaClientStub {
@@ -377,10 +378,21 @@ export async function createOrder(orderData: any): Promise<any> {
     createdAt: new Date().toISOString(),
   };
   dynamicOrders.unshift(newOrder);
+  
+  // Sync to reactive store in client environment
+  if (typeof window !== "undefined") {
+    useOrderStore.getState().addOrder(newOrder);
+  }
   return newOrder;
 }
 
 export async function getOrders(userId?: string): Promise<any[]> {
+  if (typeof window !== "undefined") {
+    const storeOrders = useOrderStore.getState().orders;
+    if (storeOrders.length > 0) {
+      return userId ? storeOrders.filter((o) => o.userId === userId) : storeOrders;
+    }
+  }
   return dynamicOrders;
 }
 
@@ -420,6 +432,11 @@ export async function updateOrderStatus(orderId: string, status: string): Promis
   const order = dynamicOrders.find((o) => o.id === orderId);
   if (order) {
     order.status = status.toUpperCase();
+  }
+  if (typeof window !== "undefined") {
+    useOrderStore.getState().updateStatus(orderId, status);
+  }
+  if (order) {
     return order;
   }
   throw new Error("Order not found");

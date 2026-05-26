@@ -7,6 +7,7 @@ import { Footer } from "@/components/Footer";
 import { useCartStore } from "@/store/cartStore";
 import { useUIStore } from "@/store/uiStore";
 import { createOrder, getCoupons } from "@/lib/db";
+import { useAuthStore } from "@/store/authStore";
 import {
   MapPin,
   CreditCard,
@@ -36,6 +37,18 @@ export default function CheckoutPage() {
   const { addToast } = useUIStore();
   const { items, couponCode, getSubtotal, getDiscountAmount, getDeliveryCost, getTotal, clearCart } =
     useCartStore();
+  const { user, addNotification } = useAuthStore();
+
+  // Protect Route: Customer role required
+  useEffect(() => {
+    if (!user) {
+      addToast("Please log in as a customer to checkout items.", "error");
+      router.push("/login");
+    } else if (user.role === "admin") {
+      addToast("Administrators cannot checkout store items.", "error");
+      router.push("/admin");
+    }
+  }, [user, router]);
 
   const [currentStep, setCurrentStep] = useState(0); // 0 = Address, 1 = Payment, 2 = Review, 3 = Success
   const [placedOrderId, setPlacedOrderId] = useState("");
@@ -126,13 +139,19 @@ export default function CheckoutPage() {
       }));
 
       const newOrder = await createOrder({
-        userId: "mock-user-1",
+        userId: user ? user.uid : "mock-user-1",
         items: dbItems,
         total: total,
         address: `${activeAddress.name}, ${activeAddress.street}, ${activeAddress.city}, ${activeAddress.postalCode}, ${activeAddress.country}`,
         couponCode: couponCode || undefined,
         paymentMethod: paymentMethod.toUpperCase(),
       });
+
+      // Dispatch admin notification
+      addNotification(
+        newOrder.id,
+        `New order ${newOrder.id} placed by ${user?.name || "Customer"} (${user?.email || "anonymous"}) for Rs ${total.toFixed(2)}.`
+      );
 
       setPlacedOrderId(newOrder.id);
       addToast("Order placed successfully!", "success");
@@ -624,7 +643,7 @@ export default function CheckoutPage() {
                             </div>
                             <div className="text-right">
                               <div className="text-xs font-bold text-petal-text-primary">
-                                ${(item.price * item.quantity).toFixed(2)}
+                                Rs {(item.price * item.quantity).toFixed(2)}
                               </div>
                               <div className="text-[10px] text-stone-400 font-semibold mt-0.5">
                                 Qty: {item.quantity}
@@ -762,23 +781,23 @@ export default function CheckoutPage() {
                 <div className="space-y-3.5 text-xs text-petal-text-secondary font-medium">
                   <div className="flex justify-between">
                     <span>Subtotal ({items.reduce((sum, item) => sum + item.quantity, 0)} items)</span>
-                    <span className="text-petal-text-primary">${subtotal.toFixed(2)}</span>
+                    <span className="text-petal-text-primary">Rs {subtotal.toFixed(2)}</span>
                   </div>
                   {discount > 0 && (
                     <div className="flex justify-between text-petal-rose font-semibold">
                       <span>Active Coupon Discount</span>
-                      <span>−${discount.toFixed(2)}</span>
+                      <span>−Rs {discount.toFixed(2)}</span>
                     </div>
                   )}
                   <div className="flex justify-between">
                     <span>Standard Shipping</span>
                     <span className="text-petal-text-primary">
-                      {delivery === 0 ? "Free" : `$${delivery.toFixed(2)}`}
+                      {delivery === 0 ? "Free" : `Rs ${delivery.toFixed(2)}`}
                     </span>
                   </div>
                   <div className="flex justify-between text-sm font-bold text-petal-text-primary pt-3.5 border-t border-stone-100">
                     <span className="font-playfair text-base italic">Total</span>
-                    <span className="font-playfair text-lg font-bold">${total.toFixed(2)}</span>
+                    <span className="font-playfair text-lg font-bold">Rs {total.toFixed(2)}</span>
                   </div>
                 </div>
 

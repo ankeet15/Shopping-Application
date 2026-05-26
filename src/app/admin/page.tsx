@@ -1,6 +1,9 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useAuthStore } from "@/store/authStore";
+import { useOrderStore } from "@/store/orderStore";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { PetalBadge } from "@/components/PetalBadge";
@@ -33,12 +36,36 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function AdminDashboardPage() {
+  const router = useRouter();
   const { addToast } = useUIStore();
+  const { user } = useAuthStore();
+
+  // Protect Route: Admin role required
+  useEffect(() => {
+    if (!user) {
+      addToast("Administrator session required.", "error");
+      router.push("/login/admin");
+    } else if (user.role !== "admin") {
+      addToast("Access denied. Customer account is unauthorized.", "error");
+      router.push("/");
+    }
+  }, [user, router]);
 
   const [activeTab, setActiveTab] = useState<"analytics" | "orders" | "products" | "coupons">("analytics");
 
+  // Sync with notification query parameters
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const tabParam = params.get("tab");
+      if (tabParam && ["analytics", "orders", "products", "coupons"].includes(tabParam)) {
+        setActiveTab(tabParam as any);
+      }
+    }
+  }, []);
+
   // Dynamic lists from mock DB
-  const [orders, setOrders] = useState<MockOrder[]>([]);
+  const { orders, setOrders } = useOrderStore();
   const [products, setProducts] = useState<MockProduct[]>([]);
   const [coupons, setCoupons] = useState<MockCoupon[]>([]);
 
@@ -84,8 +111,7 @@ export default function AdminDashboardPage() {
 
   const handleUpdateStatus = async (orderId: string, newStatus: string) => {
     try {
-      const updated = await updateOrderStatus(orderId, newStatus);
-      setOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, status: updated.status } : o)));
+      await updateOrderStatus(orderId, newStatus);
       addToast(`Order #${orderId} marked as ${newStatus}.`, "success");
     } catch (err) {
       addToast("Failed to update status.", "error");
@@ -168,7 +194,7 @@ export default function AdminDashboardPage() {
             <div className="bg-white border border-petal-border p-5 rounded-card shadow-sm flex justify-between items-center">
               <div>
                 <span className="text-[10px] uppercase font-bold tracking-widest text-stone-400">Total Revenue</span>
-                <h3 className="text-2xl font-bold text-petal-text-primary mt-1">${totalRevenue.toFixed(2)}</h3>
+                <h3 className="text-2xl font-bold text-petal-text-primary mt-1">Rs {totalRevenue.toFixed(2)}</h3>
               </div>
               <div className="w-10 h-10 bg-rose-50 text-petal-rose rounded-full flex items-center justify-center">
                 <TrendingUp size={16} />
@@ -190,7 +216,7 @@ export default function AdminDashboardPage() {
             <div className="bg-white border border-petal-border p-5 rounded-card shadow-sm flex justify-between items-center">
               <div>
                 <span className="text-[10px] uppercase font-bold tracking-widest text-stone-400">Average Order</span>
-                <h3 className="text-2xl font-bold text-petal-text-primary mt-1">${aov.toFixed(2)}</h3>
+                <h3 className="text-2xl font-bold text-petal-text-primary mt-1">Rs {aov.toFixed(2)}</h3>
               </div>
               <div className="w-10 h-10 bg-sky-50 text-petal-sky rounded-full flex items-center justify-center">
                 <Sparkles size={16} />
@@ -380,7 +406,7 @@ export default function AdminDashboardPage() {
                                   Payment Sum
                                 </h5>
                                 <p className="text-petal-text-secondary">
-                                  <strong>${ord.total.toFixed(2)}</strong> via {ord.paymentMethod}
+                                  <strong>Rs {ord.total.toFixed(2)}</strong> via {ord.paymentMethod}
                                 </p>
                               </div>
                             </div>
@@ -481,7 +507,7 @@ export default function AdminDashboardPage() {
                                 <td className="py-3 px-4 uppercase text-[9px] font-bold text-petal-lavender">
                                   {categoryLabel}
                                 </td>
-                                <td className="py-3 px-4 font-bold text-petal-text-primary">${p.price}</td>
+                                <td className="py-3 px-4 font-bold text-petal-text-primary">Rs {p.price}</td>
                               <td className="py-3 px-4">
                                 <span className={p.stock > 5 ? "text-petal-sage" : "text-petal-rose font-bold"}>
                                   {p.stock} units
@@ -564,7 +590,7 @@ export default function AdminDashboardPage() {
                               className="w-full bg-stone-50 border border-petal-border rounded-input px-3 py-2.5 text-xs text-petal-text-primary focus:outline-none"
                             >
                               <option value="PERCENT">Percent (%)</option>
-                              <option value="FIXED">Fixed ($)</option>
+                              <option value="FIXED">Fixed (Rs)</option>
                             </select>
                           </div>
                         </div>
@@ -592,7 +618,7 @@ export default function AdminDashboardPage() {
                                 {c.code}
                               </span>
                               <div className="text-[10px] text-stone-400 mt-2 font-bold uppercase tracking-wider">
-                                {c.type === "PERCENT" ? `${c.value}% reduction` : `$${c.value} direct credit`}
+                                {c.type === "PERCENT" ? `${c.value}% reduction` : `Rs ${c.value} direct credit`}
                               </div>
                             </div>
                             <PetalBadge variant="sage" label="Active" />
@@ -675,7 +701,7 @@ export default function AdminDashboardPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-[10px] font-bold uppercase tracking-widest text-petal-text-primary mb-1.5">
-                      Price (USD)
+                      Price (Rs)
                     </label>
                     <input
                       type="number"

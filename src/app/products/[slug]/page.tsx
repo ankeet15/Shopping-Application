@@ -12,6 +12,7 @@ import { useUIStore } from "@/store/uiStore";
 import { getProductBySlug, getReviews, addReview, MockProduct, MockReview } from "@/lib/db";
 import { Heart, Truck, RefreshCw, Shield, Star, Sparkles } from "lucide-react";
 import { motion } from "framer-motion";
+import { useAuthStore } from "@/store/authStore";
 
 interface ProductDetailPageProps {
   params: Promise<{ slug: string }>;
@@ -21,6 +22,16 @@ export default function ProductDetailPage({ params }: ProductDetailPageProps) {
   const resolvedParams = use(params);
   const { slug } = resolvedParams;
   const router = useRouter();
+  const { user } = useAuthStore();
+
+  // Route protection
+  useEffect(() => {
+    if (!user) {
+      router.push("/login");
+    } else if (user.role === "admin") {
+      router.push("/admin");
+    }
+  }, [user, router]);
 
   // Stores
   const { addItem } = useCartStore();
@@ -204,11 +215,11 @@ export default function ProductDetailPage({ params }: ProductDetailPageProps) {
               {/* Price Block */}
               <div className="flex items-baseline gap-3 mb-6">
                 <span className="text-3xl font-bold text-petal-text-primary">
-                  ${product.price.toFixed(2)}
+                  Rs {product.price.toFixed(2)}
                 </span>
                 {product.comparePrice && (
                   <span className="text-base text-petal-text-tertiary line-through font-semibold">
-                    ${product.comparePrice.toFixed(2)}
+                    Rs {product.comparePrice.toFixed(2)}
                   </span>
                 )}
               </div>

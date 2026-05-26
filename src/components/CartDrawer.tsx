@@ -33,7 +33,7 @@ export const CartDrawer: React.FC = () => {
   const delivery = getDeliveryCost();
   const total = getTotal();
 
-  const freeDeliveryThreshold = 100;
+  const freeDeliveryThreshold = 5000;
   const progressPercent = Math.min((subtotal / freeDeliveryThreshold) * 100, 100);
 
   const handleApplyCoupon = async (e: React.FormEvent) => {
@@ -113,7 +113,7 @@ export const CartDrawer: React.FC = () => {
                     </span>
                   ) : (
                     <span>
-                      Spend <strong className="text-petal-text-primary">${(freeDeliveryThreshold - subtotal).toFixed(2)}</strong> more for free delivery
+                      Spend <strong className="text-petal-text-primary">Rs {(freeDeliveryThreshold - subtotal).toFixed(2)}</strong> more for free delivery
                     </span>
                   )}
                   <span className="text-[10px] text-stone-400">{Math.round(progressPercent)}%</span>
@@ -148,7 +148,7 @@ export const CartDrawer: React.FC = () => {
                             {item.title}
                           </h4>
                           <span className="text-xs font-bold text-petal-text-primary">
-                            ${(item.price * item.quantity).toFixed(2)}
+                            Rs {(item.price * item.quantity).toFixed(2)}
                           </span>
                         </div>
                         <span className="text-[10px] uppercase font-bold text-petal-text-tertiary tracking-wide mt-0.5 block">
@@ -218,7 +218,7 @@ export const CartDrawer: React.FC = () => {
                   <div className="bg-purple-50 border border-purple-100 rounded-badge px-3.5 py-2 flex items-center justify-between text-xs text-petal-lavender font-bold mb-5">
                     <span className="flex items-center gap-1.5">
                       <Tag size={13} />
-                      Coupon &ldquo;{couponCode}&rdquo; active (-${discount.toFixed(2)})
+                      Coupon &ldquo;{couponCode}&rdquo; active (-Rs {discount.toFixed(2)})
                     </span>
                     <button
                       onClick={handleRemoveCoupon}
@@ -250,23 +250,23 @@ export const CartDrawer: React.FC = () => {
                 <div className="space-y-2.5 text-xs text-petal-text-secondary font-medium mb-6">
                   <div className="flex justify-between">
                     <span>Subtotal</span>
-                    <span className="text-petal-text-primary">${subtotal.toFixed(2)}</span>
+                    <span className="text-petal-text-primary">Rs {subtotal.toFixed(2)}</span>
                   </div>
                   {discount > 0 && (
                     <div className="flex justify-between text-petal-rose">
                       <span>Discount</span>
-                      <span>−${discount.toFixed(2)}</span>
+                      <span>−Rs {discount.toFixed(2)}</span>
                     </div>
                   )}
                   <div className="flex justify-between">
                     <span>Delivery</span>
                     <span className="text-petal-text-primary">
-                      {delivery === 0 ? "Free" : `$${delivery.toFixed(2)}`}
+                      {delivery === 0 ? "Free" : `Rs ${delivery.toFixed(2)}`}
                     </span>
                   </div>
                   <div className="flex justify-between text-sm font-bold text-petal-text-primary pt-2.5 border-t border-stone-200/60">
                     <span className="font-playfair text-base italic">Total</span>
-                    <span className="font-playfair text-lg font-bold">${total.toFixed(2)}</span>
+                    <span className="font-playfair text-lg font-bold">Rs {total.toFixed(2)}</span>
                   </div>
                 </div>
 

@@ -1,12 +1,13 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { ShoppingBag, Heart, Search, User, Menu, X } from "lucide-react";
+import { ShoppingBag, Heart, Search, User, Menu, X, Bell } from "lucide-react";
 import { useCartStore } from "@/store/cartStore";
 import { useWishlistStore } from "@/store/wishlistStore";
 import { useUIStore } from "@/store/uiStore";
+import { useAuthStore } from "@/store/authStore";
 import { motion, AnimatePresence } from "framer-motion";
 
 export const Navbar: React.FC = () => {
@@ -15,14 +16,28 @@ export const Navbar: React.FC = () => {
   const { items } = useCartStore();
   const { productIds } = useWishlistStore();
   const { setCartOpen, addToast } = useUIStore();
+  const { user, logout, notifications, markNotificationAsRead, clearNotifications } = useAuthStore();
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [showNotifPanel, setShowNotifPanel] = useState(false);
+  const notifRef = useRef<HTMLDivElement>(null);
 
-  const totalCartCount = items.reduce((sum, item) => sum + item.quantity, 0);
-  const wishlistCount = productIds.length;
+  // Hydration protection
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const currentUser = mounted ? user : null;
+  const isAdmin = currentUser?.role === "admin";
+  const isCustomer = currentUser?.role === "customer";
+
+  const totalCartCount = mounted ? items.reduce((sum, item) => sum + item.quantity, 0) : 0;
+  const wishlistCount = mounted ? productIds.length : 0;
+  const unreadCount = mounted ? notifications.filter((n) => !n.read).length : 0;
 
   useEffect(() => {
     const handleScroll = () => {
@@ -36,7 +51,19 @@ export const Navbar: React.FC = () => {
   useEffect(() => {
     setMobileMenuOpen(false);
     setSearchOpen(false);
+    setShowNotifPanel(false);
   }, [pathname]);
+
+  // Click outside to close notifications panel
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (notifRef.current && !notifRef.current.contains(event.target as Node)) {
+        setShowNotifPanel(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,12 +74,24 @@ export const Navbar: React.FC = () => {
     }
   };
 
+  // Dynamic links depending on who is logged in
   const navLinks = [
     { label: "Shop", href: "/products" },
-    { label: "Apothecary", href: "/products?category=apothecary" },
-    { label: "Dashboard", href: "/dashboard" },
-    { label: "Admin", href: "/admin" },
   ];
+
+  if (currentUser) {
+    if (isAdmin) {
+      navLinks.push({ label: "Admin Command", href: "/admin" });
+    } else {
+      navLinks.push(
+        { label: "Apothecary", href: "/products?category=apothecary" },
+        { label: "Dashboard", href: "/dashboard" }
+      );
+    }
+  } else {
+    // Unauthenticated user - show minimal links
+    navLinks.push({ label: "Apothecary", href: "/products?category=apothecary" });
+  }
 
   return (
     <>
@@ -116,42 +155,148 @@ export const Navbar: React.FC = () => {
               <Search size={19} />
             </button>
 
-            {/* Profile */}
-            <Link
-              href="/dashboard"
-              className="text-petal-text-secondary hover:text-petal-rose transition-colors duration-200 p-1.5"
-              aria-label="User Account"
-            >
-              <User size={19} />
-            </Link>
+            {/* Admin Notifications Bell */}
+            {isAdmin && (
+              <div className="relative" ref={notifRef}>
+                <button
+                  onClick={() => setShowNotifPanel(!showNotifPanel)}
+                  className="text-petal-text-secondary hover:text-petal-rose transition-colors duration-200 p-1.5 relative cursor-pointer"
+                  aria-label="Admin Notifications"
+                >
+                  <Bell size={19} />
+                  {unreadCount > 0 && (
+                    <span className="absolute top-0.5 right-0.5 w-4 h-4 bg-petal-rose text-white text-[9px] font-bold rounded-full flex items-center justify-center transform translate-x-1 -translate-y-1 border border-white animate-pulse">
+                      {unreadCount}
+                    </span>
+                  )}
+                </button>
 
-            {/* Wishlist Link */}
-            <Link
-              href="/dashboard?tab=wishlist"
-              className="text-petal-text-secondary hover:text-petal-rose transition-colors duration-200 p-1.5 relative"
-              aria-label="Saved items"
-            >
-              <Heart size={19} />
-              {wishlistCount > 0 && (
-                <span className="absolute top-0 right-0 w-4 h-4 bg-petal-rose text-white text-[9px] font-bold rounded-full flex items-center justify-center transform translate-x-1.5 -translate-y-1.5 border border-white">
-                  {wishlistCount}
-                </span>
-              )}
-            </Link>
+                {/* Notifications Dropdown Panel */}
+                <AnimatePresence>
+                  {showNotifPanel && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                      className="absolute right-0 mt-3.5 w-80 bg-white border border-petal-border rounded-card shadow-lg z-[60] overflow-hidden"
+                    >
+                      <div className="p-4 border-b border-stone-100 flex justify-between items-center bg-stone-50/50">
+                        <span className="text-[10px] font-bold text-petal-text-primary uppercase tracking-widest">
+                          Admin Alerts ({unreadCount} new)
+                        </span>
+                        {notifications.length > 0 && (
+                          <button
+                            onClick={clearNotifications}
+                            className="text-[9px] font-bold text-petal-rose uppercase hover:underline cursor-pointer"
+                          >
+                            Clear
+                          </button>
+                        )}
+                      </div>
+                      <div className="max-h-72 overflow-y-auto divide-y divide-stone-50">
+                        {notifications.length > 0 ? (
+                          notifications.map((n) => (
+                            <div
+                              key={n.id}
+                              onClick={() => {
+                                markNotificationAsRead(n.id);
+                                router.push("/admin?tab=orders");
+                              }}
+                              className={`p-3.5 hover:bg-stone-50/50 cursor-pointer transition-colors text-left flex gap-2.5 items-start ${
+                                !n.read ? "bg-purple-50/20" : ""
+                              }`}
+                            >
+                              <div className="w-1.5 h-1.5 rounded-full bg-petal-lavender mt-1.5 flex-shrink-0" />
+                              <div className="space-y-1 flex-1">
+                                <p className="text-[11px] font-medium text-petal-text-primary leading-normal">
+                                  {n.message}
+                                </p>
+                                <span className="text-[9px] text-stone-400 font-bold block">
+                                  {new Date(n.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </span>
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="py-8 px-4 text-center text-xs italic text-stone-400 font-medium">
+                            No notifications received yet.
+                          </div>
+                        )}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            )}
 
-            {/* Shopping Bag / Cart */}
-            <button
-              onClick={() => setCartOpen(true)}
-              className="text-petal-text-secondary hover:text-petal-rose transition-colors duration-200 p-1.5 relative"
-              aria-label="Shopping bag"
-            >
-              <ShoppingBag size={19} />
-              {totalCartCount > 0 && (
-                <span className="absolute top-0 right-0 w-4 h-4 bg-petal-lavender text-white text-[9px] font-bold rounded-full flex items-center justify-center transform translate-x-1.5 -translate-y-1.5 border border-white">
-                  {totalCartCount}
+            {/* Profile Icon / Dashboard Redirect */}
+            {isCustomer && (
+              <Link
+                href="/dashboard"
+                className="text-petal-text-secondary hover:text-petal-rose transition-colors duration-200 p-1.5"
+                aria-label="User Account"
+              >
+                <User size={19} />
+              </Link>
+            )}
+
+            {/* Wishlist Link (Customers only) */}
+            {isCustomer && (
+              <Link
+                href="/dashboard?tab=wishlist"
+                className="text-petal-text-secondary hover:text-petal-rose transition-colors duration-200 p-1.5 relative"
+                aria-label="Saved items"
+              >
+                <Heart size={19} />
+                {wishlistCount > 0 && (
+                  <span className="absolute top-0 right-0 w-4 h-4 bg-petal-rose text-white text-[9px] font-bold rounded-full flex items-center justify-center transform translate-x-1.5 -translate-y-1.5 border border-white">
+                    {wishlistCount}
+                  </span>
+                )}
+              </Link>
+            )}
+
+            {/* Shopping Bag / Cart (Customers only, hidden for Admins) */}
+            {(!currentUser || isCustomer) && (
+              <button
+                onClick={() => setCartOpen(true)}
+                className="text-petal-text-secondary hover:text-petal-rose transition-colors duration-200 p-1.5 relative cursor-pointer"
+                aria-label="Shopping bag"
+              >
+                <ShoppingBag size={19} />
+                {totalCartCount > 0 && (
+                  <span className="absolute top-0 right-0 w-4 h-4 bg-petal-lavender text-white text-[9px] font-bold rounded-full flex items-center justify-center transform translate-x-1.5 -translate-y-1.5 border border-white">
+                    {totalCartCount}
+                  </span>
+                )}
+              </button>
+            )}
+
+            {/* Profile Account Portal (Log in / Sign Out actions) */}
+            {currentUser ? (
+              <div className="flex items-center gap-3">
+                <span className="hidden sm:inline text-[11px] font-bold text-petal-text-secondary">
+                  Hi, {currentUser.name.split(" ")[0]}
                 </span>
-              )}
-            </button>
+                <button
+                  onClick={() => {
+                    logout();
+                    addToast("Logged out successfully.", "neutral");
+                    router.push("/login");
+                  }}
+                  className="text-[9px] uppercase font-bold tracking-wider text-petal-rose hover:text-rose-600 transition-colors border border-rose-100 bg-rose-50/40 px-2.5 py-1.5 rounded-badge cursor-pointer"
+                >
+                  Sign Out
+                </button>
+              </div>
+            ) : (
+              <Link
+                href="/login"
+                className="text-[9px] uppercase font-bold tracking-widest bg-petal-rose hover:bg-rose-500 text-white px-4 py-2.5 rounded-badge transition-all shadow-sm cursor-pointer"
+              >
+                Log In
+              </Link>
+            )}
           </div>
         </div>
       </header>
