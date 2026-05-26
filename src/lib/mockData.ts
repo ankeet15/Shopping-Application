@@ -44,6 +44,7 @@ export interface MockCoupon {
 
 export interface MockOrder {
   id: string;
+  userId?: string;
   items: any[];
   address: string;
   phone: string;

@@ -12,6 +12,7 @@ import { getOrders, getFeaturedProducts, MockOrder, MockProduct } from "@/lib/db
 import { User, ShoppingBag, Heart, MapPin, Wallet, ArrowRight, Plus, Trash2, ShieldCheck } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuthStore } from "@/store/authStore";
+import { useOrderStore } from "@/store/orderStore";
 
 function UserDashboardContent() {
   const router = useRouter();
@@ -34,8 +35,8 @@ function UserDashboardContent() {
 
   const activeTab = searchParams.get("tab") || "profile";
 
-  // State
-  const [orders, setOrders] = useState<MockOrder[]>([]);
+  // State (using reactive order store)
+  const { orders, setOrders } = useOrderStore();
   const [wishlistItems, setWishlistItems] = useState<MockProduct[]>([]);
   const [walletBalance, setWalletBalance] = useState(15000.0);
   const [addFundsAmount, setAddFundsAmount] = useState("");
@@ -61,8 +62,8 @@ function UserDashboardContent() {
   // Fetch orders & wishlist items
   useEffect(() => {
     async function loadDashboardData() {
-      // Load orders
-      const ords = await getOrders("mock-user-1");
+      // Load orders from database fallback
+      const ords = await getOrders(user?.uid || "mock-user-1");
       setOrders(ords);
 
       // Load wishlist items
@@ -246,52 +247,56 @@ function UserDashboardContent() {
                     </p>
                   </div>
 
-                  {orders.length > 0 ? (
-                    <div className="space-y-5">
-                      {orders.map((ord) => {
-                        // Badge color maps
-                        let badgeType: "rose" | "lavender" | "sky" | "sage" | "neutral" = "lavender";
-                        if (ord.status === "DELIVERED") badgeType = "sage";
-                        if (ord.status === "SHIPPED") badgeType = "sky";
-                        if (ord.status === "CANCELLED") badgeType = "rose";
+                  {/* Filter orders dynamically to display only this customer's orders */}
+                  {(() => {
+                    const myOrders = orders.filter((o) => o.userId === (user?.uid || "mock-user-1"));
+                    return myOrders.length > 0 ? (
+                      <div className="space-y-5">
+                        {myOrders.map((ord) => {
+                          // Badge color maps
+                          let badgeType: "rose" | "lavender" | "sky" | "sage" | "neutral" = "lavender";
+                          if (ord.status === "DELIVERED") badgeType = "sage";
+                          if (ord.status === "SHIPPED") badgeType = "sky";
+                          if (ord.status === "CANCELLED") badgeType = "rose";
 
-                        return (
-                          <div
-                            key={ord.id}
-                            className="bg-white border border-petal-border rounded-card p-5.5 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-6"
-                          >
-                            <div className="space-y-2">
-                              <div className="flex items-center gap-3">
-                                <span className="font-playfair text-sm italic font-bold text-petal-text-primary">
-                                  Order #{ord.id}
+                          return (
+                            <div
+                              key={ord.id}
+                              className="bg-white border border-petal-border rounded-card p-5.5 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-6"
+                            >
+                              <div className="space-y-2">
+                                <div className="flex items-center gap-3">
+                                  <span className="font-playfair text-sm italic font-bold text-petal-text-primary">
+                                    Order #{ord.id}
+                                  </span>
+                                  <PetalBadge variant={badgeType} label={ord.status} />
+                                </div>
+                                <p className="text-xs text-petal-text-secondary font-medium leading-relaxed max-w-[400px]">
+                                  <strong>Destination:</strong> {ord.address} <br />
+                                  <strong>Date:</strong> {new Date(ord.createdAt).toLocaleDateString()}
+                                </p>
+                              </div>
+
+                              <div className="text-left md:text-right space-y-2.5 w-full md:w-auto border-t md:border-t-0 pt-4 md:pt-0 border-stone-50">
+                                <div className="text-sm font-bold text-petal-text-primary">
+                                  Total paid: Rs {ord.total.toFixed(2)}
+                                </div>
+                                <span className="text-[10px] uppercase font-bold text-petal-text-tertiary tracking-wider block">
+                                  Paid via {ord.paymentMethod}
                                 </span>
-                                <PetalBadge variant={badgeType} label={ord.status} />
                               </div>
-                              <p className="text-xs text-petal-text-secondary font-medium leading-relaxed max-w-[400px]">
-                                <strong>Destination:</strong> {ord.address} <br />
-                                <strong>Date:</strong> {new Date(ord.createdAt).toLocaleDateString()}
-                              </p>
                             </div>
-
-                            <div className="text-left md:text-right space-y-2.5 w-full md:w-auto border-t md:border-t-0 pt-4 md:pt-0 border-stone-50">
-                              <div className="text-sm font-bold text-petal-text-primary">
-                                Total paid: Rs {ord.total.toFixed(2)}
-                              </div>
-                              <span className="text-[10px] uppercase font-bold text-petal-text-tertiary tracking-wider block">
-                                Paid via {ord.paymentMethod}
-                              </span>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <div className="bg-white border border-petal-border rounded-card p-12 shadow-sm text-center">
-                      <p className="text-sm font-semibold text-petal-text-secondary italic">
-                        You have not placed any orders yet.
-                      </p>
-                    </div>
-                  )}
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="bg-white border border-petal-border rounded-card p-12 shadow-sm text-center">
+                        <p className="text-sm font-semibold text-petal-text-secondary italic">
+                          You have not placed any orders yet.
+                        </p>
+                      </div>
+                    );
+                  })()}
                 </motion.div>
               )}
 

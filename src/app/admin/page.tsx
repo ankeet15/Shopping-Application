@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/authStore";
+import { useOrderStore } from "@/store/orderStore";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { PetalBadge } from "@/components/PetalBadge";
@@ -64,7 +65,7 @@ export default function AdminDashboardPage() {
   }, []);
 
   // Dynamic lists from mock DB
-  const [orders, setOrders] = useState<MockOrder[]>([]);
+  const { orders, setOrders } = useOrderStore();
   const [products, setProducts] = useState<MockProduct[]>([]);
   const [coupons, setCoupons] = useState<MockCoupon[]>([]);
 
@@ -110,8 +111,7 @@ export default function AdminDashboardPage() {
 
   const handleUpdateStatus = async (orderId: string, newStatus: string) => {
     try {
-      const updated = await updateOrderStatus(orderId, newStatus);
-      setOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, status: updated.status } : o)));
+      await updateOrderStatus(orderId, newStatus);
       addToast(`Order #${orderId} marked as ${newStatus}.`, "success");
     } catch (err) {
       addToast("Failed to update status.", "error");
