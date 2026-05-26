@@ -11,6 +11,7 @@ import { useUIStore } from "@/store/uiStore";
 import { getOrders, getFeaturedProducts, MockOrder, MockProduct } from "@/lib/db";
 import { User, ShoppingBag, Heart, MapPin, Wallet, ArrowRight, Plus, Trash2, ShieldCheck } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useAuthStore } from "@/store/authStore";
 
 function UserDashboardContent() {
   const router = useRouter();
@@ -18,6 +19,18 @@ function UserDashboardContent() {
   const { addToast } = useUIStore();
   const { productIds, toggleWishlist } = useWishlistStore();
   const { addItem } = useCartStore();
+  const { user } = useAuthStore();
+
+  // Protect Route: Customer role required
+  useEffect(() => {
+    if (!user) {
+      addToast("Please log in to view your dashboard.", "error");
+      router.push("/login");
+    } else if (user.role === "admin") {
+      addToast("Administrators cannot access the customer dashboard.", "error");
+      router.push("/admin");
+    }
+  }, [user, router]);
 
   const activeTab = searchParams.get("tab") || "profile";
 
@@ -33,6 +46,17 @@ function UserDashboardContent() {
     phone: "+1 (555) 019-2834",
     joined: "May 2026",
   });
+
+  // Sync profile state with logged-in user
+  useEffect(() => {
+    if (user) {
+      setUserProfile((prev) => ({
+        ...prev,
+        name: user.name,
+        email: user.email,
+      }));
+    }
+  }, [user]);
 
   // Fetch orders & wishlist items
   useEffect(() => {

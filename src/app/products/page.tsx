@@ -11,10 +11,21 @@ import { useUIStore } from "@/store/uiStore";
 import { getProducts, getCategories, MockProduct, MockCategory } from "@/lib/db";
 import { Grid, List, SlidersHorizontal, ChevronDown, Check, Star } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useAuthStore } from "@/store/authStore";
 
 function ProductCatalogContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { user } = useAuthStore();
+
+  // Route protection
+  useEffect(() => {
+    if (!user) {
+      router.push("/login");
+    } else if (user.role === "admin") {
+      router.push("/admin");
+    }
+  }, [user, router]);
 
   // Stores
   const { addItem } = useCartStore();

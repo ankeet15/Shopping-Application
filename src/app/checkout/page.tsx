@@ -7,6 +7,7 @@ import { Footer } from "@/components/Footer";
 import { useCartStore } from "@/store/cartStore";
 import { useUIStore } from "@/store/uiStore";
 import { createOrder, getCoupons } from "@/lib/db";
+import { useAuthStore } from "@/store/authStore";
 import {
   MapPin,
   CreditCard,
@@ -36,6 +37,18 @@ export default function CheckoutPage() {
   const { addToast } = useUIStore();
   const { items, couponCode, getSubtotal, getDiscountAmount, getDeliveryCost, getTotal, clearCart } =
     useCartStore();
+  const { user, addNotification } = useAuthStore();
+
+  // Protect Route: Customer role required
+  useEffect(() => {
+    if (!user) {
+      addToast("Please log in as a customer to checkout items.", "error");
+      router.push("/login");
+    } else if (user.role === "admin") {
+      addToast("Administrators cannot checkout store items.", "error");
+      router.push("/admin");
+    }
+  }, [user, router]);
 
   const [currentStep, setCurrentStep] = useState(0); // 0 = Address, 1 = Payment, 2 = Review, 3 = Success
   const [placedOrderId, setPlacedOrderId] = useState("");
@@ -126,13 +139,19 @@ export default function CheckoutPage() {
       }));
 
       const newOrder = await createOrder({
-        userId: "mock-user-1",
+        userId: user ? user.uid : "mock-user-1",
         items: dbItems,
         total: total,
         address: `${activeAddress.name}, ${activeAddress.street}, ${activeAddress.city}, ${activeAddress.postalCode}, ${activeAddress.country}`,
         couponCode: couponCode || undefined,
         paymentMethod: paymentMethod.toUpperCase(),
       });
+
+      // Dispatch admin notification
+      addNotification(
+        newOrder.id,
+        `New order ${newOrder.id} placed by ${user?.name || "Customer"} (${user?.email || "anonymous"}) for Rs ${total.toFixed(2)}.`
+      );
 
       setPlacedOrderId(newOrder.id);
       addToast("Order placed successfully!", "success");

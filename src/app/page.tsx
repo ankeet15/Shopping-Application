@@ -23,6 +23,7 @@ import { useCartStore } from "@/store/cartStore";
 import { useWishlistStore } from "@/store/wishlistStore";
 import { useUIStore } from "@/store/uiStore";
 import { getFeaturedProducts, MockProduct } from "@/lib/db";
+import { useAuthStore } from "@/store/authStore";
 
 // Lucide icon helper mapping
 const iconMap: Record<string, React.ComponentType<any>> = {
@@ -36,6 +37,15 @@ const iconMap: Record<string, React.ComponentType<any>> = {
 
 export default function Homepage() {
   const router = useRouter();
+  const { user } = useAuthStore();
+
+  useEffect(() => {
+    if (!user) {
+      router.push("/login");
+    } else if (user.role === "admin") {
+      router.push("/admin");
+    }
+  }, [user, router]);
   const [featuredProducts, setFeaturedProducts] = useState<MockProduct[]>([]);
   const [recentlyViewed, setRecentlyViewed] = useState<MockProduct[]>([]);
   const [email, setEmail] = useState("");

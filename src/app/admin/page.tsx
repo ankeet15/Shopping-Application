@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useAuthStore } from "@/store/authStore";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { PetalBadge } from "@/components/PetalBadge";
@@ -33,9 +35,33 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function AdminDashboardPage() {
+  const router = useRouter();
   const { addToast } = useUIStore();
+  const { user } = useAuthStore();
+
+  // Protect Route: Admin role required
+  useEffect(() => {
+    if (!user) {
+      addToast("Administrator session required.", "error");
+      router.push("/login/admin");
+    } else if (user.role !== "admin") {
+      addToast("Access denied. Customer account is unauthorized.", "error");
+      router.push("/");
+    }
+  }, [user, router]);
 
   const [activeTab, setActiveTab] = useState<"analytics" | "orders" | "products" | "coupons">("analytics");
+
+  // Sync with notification query parameters
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const tabParam = params.get("tab");
+      if (tabParam && ["analytics", "orders", "products", "coupons"].includes(tabParam)) {
+        setActiveTab(tabParam as any);
+      }
+    }
+  }, []);
 
   // Dynamic lists from mock DB
   const [orders, setOrders] = useState<MockOrder[]>([]);
