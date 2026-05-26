@@ -124,11 +124,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           <div className="flex items-center justify-between mt-2">
             <div className="flex items-baseline gap-2">
               <span className="text-base font-bold text-petal-text-primary">
-                ${price.toFixed(2)}
+                Rs {price.toFixed(2)}
               </span>
               {comparePrice && comparePrice > price && (
                 <span className="text-xs text-petal-text-tertiary line-through font-medium">
-                  ${comparePrice.toFixed(2)}
+                  Rs {comparePrice.toFixed(2)}
                 </span>
               )}
             </div>

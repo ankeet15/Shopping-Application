@@ -204,11 +204,11 @@ export default function ProductDetailPage({ params }: ProductDetailPageProps) {
               {/* Price Block */}
               <div className="flex items-baseline gap-3 mb-6">
                 <span className="text-3xl font-bold text-petal-text-primary">
-                  ${product.price.toFixed(2)}
+                  Rs {product.price.toFixed(2)}
                 </span>
                 {product.comparePrice && (
                   <span className="text-base text-petal-text-tertiary line-through font-semibold">
-                    ${product.comparePrice.toFixed(2)}
+                    Rs {product.comparePrice.toFixed(2)}
                   </span>
                 )}
               </div>

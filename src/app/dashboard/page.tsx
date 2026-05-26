@@ -24,7 +24,7 @@ function UserDashboardContent() {
   // State
   const [orders, setOrders] = useState<MockOrder[]>([]);
   const [wishlistItems, setWishlistItems] = useState<MockProduct[]>([]);
-  const [walletBalance, setWalletBalance] = useState(150.0);
+  const [walletBalance, setWalletBalance] = useState(15000.0);
   const [addFundsAmount, setAddFundsAmount] = useState("");
   const [userProfile, setUserProfile] = useState({
     name: "Ankit K.",
@@ -58,7 +58,7 @@ function UserDashboardContent() {
     const amt = parseFloat(addFundsAmount);
     if (!isNaN(amt) && amt > 0) {
       setWalletBalance((prev) => prev + amt);
-      addFundsAmount && addToast(`Added $${amt.toFixed(2)} to your wallet.`, "success");
+      addFundsAmount && addToast(`Added Rs ${amt.toFixed(2)} to your wallet.`, "success");
       setAddFundsAmount("");
     }
   };
@@ -106,7 +106,7 @@ function UserDashboardContent() {
                 Wallet Balance
               </div>
               <div className="text-lg font-bold text-petal-text-primary mt-0.5">
-                ${walletBalance.toFixed(2)}
+                Rs {walletBalance.toFixed(2)}
               </div>
             </div>
           </div>
@@ -251,7 +251,7 @@ function UserDashboardContent() {
 
                             <div className="text-left md:text-right space-y-2.5 w-full md:w-auto border-t md:border-t-0 pt-4 md:pt-0 border-stone-50">
                               <div className="text-sm font-bold text-petal-text-primary">
-                                Total paid: ${ord.total.toFixed(2)}
+                                Total paid: Rs {ord.total.toFixed(2)}
                               </div>
                               <span className="text-[10px] uppercase font-bold text-petal-text-tertiary tracking-wider block">
                                 Paid via {ord.paymentMethod}
@@ -316,7 +316,7 @@ function UserDashboardContent() {
 
                           <div className="flex items-center justify-between gap-3 mt-4">
                             <span className="text-xs font-bold text-petal-text-primary">
-                              ${item.price.toFixed(2)}
+                              Rs {item.price.toFixed(2)}
                             </span>
                             <button
                               onClick={() => handleAddToCart(item)}
@@ -360,14 +360,14 @@ function UserDashboardContent() {
                   <form onSubmit={handleAddFunds} className="space-y-4 max-w-[360px]">
                     <div>
                       <label className="block text-[10px] font-bold uppercase tracking-widest text-petal-text-primary mb-1.5">
-                        Add Funds (USD)
+                        Add Funds (Rs)
                       </label>
                       <div className="flex gap-3">
                         <input
                           type="number"
                           required
-                          min="1"
-                          max="1000"
+                          min="100"
+                          max="50000"
                           placeholder="e.g. 50"
                           value={addFundsAmount}
                           onChange={(e) => setAddFundsAmount(e.target.value)}

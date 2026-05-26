@@ -30,7 +30,7 @@ function ProductCatalogContent() {
   // Filters state from URL or defaults
   const activeCategory = searchParams.get("category") || "all";
   const searchQuery = searchParams.get("search") || "";
-  const [maxPrice, setMaxPrice] = useState<number>(250);
+  const [maxPrice, setMaxPrice] = useState<number>(10000);
   const [minRating, setMinRating] = useState<number | null>(null);
   const [inStockOnly, setInStockOnly] = useState<boolean>(false);
   const [sortBy, setSortBy] = useState<string>("latest");
@@ -234,16 +234,17 @@ function ProductCatalogContent() {
               <div className="flex flex-col gap-3">
                 <input
                   type="range"
-                  min="10"
-                  max="250"
+                  min="100"
+                  max="10000"
+                  step="100"
                   value={maxPrice}
                   onChange={handlePriceChange}
                   className="w-full accent-petal-rose h-1.5 bg-stone-100 rounded-lg cursor-pointer"
                 />
                 <div className="flex items-center justify-between text-xs font-bold text-petal-text-secondary mt-1">
-                  <span>$10</span>
+                  <span>Rs 100</span>
                   <span className="bg-rose-50 text-petal-rose px-3 py-1 rounded-badge border border-rose-100">
-                    Max: ${maxPrice}
+                    Max: Rs {maxPrice}
                   </span>
                 </div>
               </div>
@@ -360,11 +361,11 @@ function ProductCatalogContent() {
                           <div className="flex items-center gap-6 mt-4 w-full justify-between">
                             <div className="flex items-baseline gap-2">
                               <span className="text-lg font-bold text-petal-text-primary">
-                                ${product.price.toFixed(2)}
+                                Rs {product.price.toFixed(2)}
                               </span>
                               {product.comparePrice && (
                                 <span className="text-xs text-petal-text-tertiary line-through">
-                                  ${product.comparePrice.toFixed(2)}
+                                  Rs {product.comparePrice.toFixed(2)}
                                 </span>
                               )}
                             </div>

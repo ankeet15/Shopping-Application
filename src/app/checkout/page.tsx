@@ -624,7 +624,7 @@ export default function CheckoutPage() {
                             </div>
                             <div className="text-right">
                               <div className="text-xs font-bold text-petal-text-primary">
-                                ${(item.price * item.quantity).toFixed(2)}
+                                Rs {(item.price * item.quantity).toFixed(2)}
                               </div>
                               <div className="text-[10px] text-stone-400 font-semibold mt-0.5">
                                 Qty: {item.quantity}
@@ -762,23 +762,23 @@ export default function CheckoutPage() {
                 <div className="space-y-3.5 text-xs text-petal-text-secondary font-medium">
                   <div className="flex justify-between">
                     <span>Subtotal ({items.reduce((sum, item) => sum + item.quantity, 0)} items)</span>
-                    <span className="text-petal-text-primary">${subtotal.toFixed(2)}</span>
+                    <span className="text-petal-text-primary">Rs {subtotal.toFixed(2)}</span>
                   </div>
                   {discount > 0 && (
                     <div className="flex justify-between text-petal-rose font-semibold">
                       <span>Active Coupon Discount</span>
-                      <span>−${discount.toFixed(2)}</span>
+                      <span>−Rs {discount.toFixed(2)}</span>
                     </div>
                   )}
                   <div className="flex justify-between">
                     <span>Standard Shipping</span>
                     <span className="text-petal-text-primary">
-                      {delivery === 0 ? "Free" : `$${delivery.toFixed(2)}`}
+                      {delivery === 0 ? "Free" : `Rs ${delivery.toFixed(2)}`}
                     </span>
                   </div>
                   <div className="flex justify-between text-sm font-bold text-petal-text-primary pt-3.5 border-t border-stone-100">
                     <span className="font-playfair text-base italic">Total</span>
-                    <span className="font-playfair text-lg font-bold">${total.toFixed(2)}</span>
+                    <span className="font-playfair text-lg font-bold">Rs {total.toFixed(2)}</span>
                   </div>
                 </div>
 
